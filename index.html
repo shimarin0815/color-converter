@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>カラーコード・コンバーター</title>
+    <style>
+        /* --- デザイン (CSS) --- */
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #3498db; /* 初期カラー */
+            transition: background-color 0.5s ease; /* 色が滑らかに変わる設定 */
+        }
+
+        /* 真ん中の白いカードのデザイン */
+        .converter-card {
+            background: rgba(255, 255, 255, 0.9); /* 少し透けた白 */
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            width: 320px;
+            text-align: center;
+        }
+
+        h1 {
+            color: #333;
+            font-size: 24px;
+            margin-bottom: 30px;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        label {
+            display: block;
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            font-size: 16px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            box-sizing: border-box; /*枠線を含めたサイズ計算 */
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus {
+            border-color: #3498db;
+        }
+
+        /* 色見本の丸い表示 */
+        .color-preview {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background-color: #3498db;
+            margin: 0 auto 20px auto;
+            border: 3px solid #fff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="converter-card">
+        <div class="color-preview" id="previewCircle"></div>
+        <h1>Color Converter</h1>
+
+        <div class="input-group">
+            <label>HEX (例: #RRGGBB)</label>
+            <input type="text" id="hexInput" value="#3498db" placeholder="#000000">
+        </div>
+
+        <div class="input-group">
+            <label>RGB (例: 0, 0, 0)</label>
+            <input type="text" id="rgbInput" value="52, 152, 219" placeholder="R, G, B">
+        </div>
+
+        <div class="input-group">
+            <label>HSL (例: 0, 0%, 0%)</label>
+            <input type="text" id="hslInput" value="204, 70%, 53%" placeholder="H, S, L">
+        </div>
+    </div>
+
+    <script>
+        // 1. HTMLの要素を変数に入れる（あだ名をつける感じ）
+        const hexInput = document.getElementById('hexInput');
+        const rgbInput = document.getElementById('rgbInput');
+        const hslInput = document.getElementById('hslInput');
+        const body = document.body;
+        const previewCircle = document.getElementById('previewCircle');
+
+        // 2. 色を画面に反映させる関数
+        function updateColor(hex, rgb, hsl) {
+            body.style.backgroundColor = hex;      // 背景色を変える
+            previewCircle.style.backgroundColor = hex; // 丸いアイコンの色を変える
+        }
+
+        // 3. HEX (#3498db) が入力された時の処理
+        hexInput.addEventListener('input', function() {
+            let hex = this.value;
+            if (/^#[0-9A-F]{6}$/i.test(hex)) { // 正しい形式かチェック
+                const rgb = hexToRgb(hex);
+                const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
+                
+                // 他のボックスに値をセット
+                rgbInput.value = `${rgb.r}, ${rgb.g}, ${rgb.b}`;
+                hslInput.value = `${hsl.h}, ${hsl.s}%, ${hsl.l}%`;
+                
+                updateColor(hex);
+            }
+        });
+
+        // 4. RGB (52, 152, 219) が入力された時の処理
+        rgbInput.addEventListener('input', function() {
+            const values = this.value.split(',').map(v => Number(v.trim()));
+            if (values.length === 3 && values.every(v => v >= 0 && v <= 255)) {
+                const [r, g, b] = values;
+                const hex = rgbToHex(r, g, b);
+                const hsl = rgbToHsl(r, g, b);
+
+                hexInput.value = hex;
+                hslInput.value = `${hsl.h}, ${hsl.s}%, ${hsl.l}%`;
+
+                updateColor(hex);
+            }
+        });
+
+        // --- 計算用の便利な関数たち (数学の公式みたいなもの) ---
+
+        // HEX を RGB に変換
+        function hexToRgb(hex) {
+            const bigint = parseInt(hex.slice(1), 16);
+            const r = (bigint >> 16) & 255;
+            const g = (bigint >> 8) & 255;
+            const b = bigint & 255;
+            return { r, g, b };
+        }
+
+        // RGB を HEX に変換
+        function rgbToHex(r, g, b) {
+            return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase();
+        }
+
+        // RGB を HSL に変換 (少し複雑な数学です！)
+        function rgbToHsl(r, g, b) {
+            r /= 255; g /= 255; b /= 255;
+            const max = Math.max(r, g, b), min = Math.min(r, g, b);
+            let h, s, l = (max + min) / 2;
+
+            if (max === min) {
+                h = s = 0; 
+            } else {
+                const d = max - min;
+                s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+                switch (max) {
+                    case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+                    case g: h = (b - r) / d + 2; break;
+                    case b: h = (r - g) / d + 4; break;
+                }
+                h /= 6;
+            }
+            return { 
+                h: Math.round(h * 360), 
+                s: Math.round(s * 100), 
+                l: Math.round(l * 100) 
+            };
+        }
+    </script>
+</body>
+</html>
